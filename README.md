@@ -61,7 +61,7 @@ ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/
 ## 🔧 Playbook Execution Flow
 
 ### 🔘 **General Setup**:
-Applies basic system configurations to **all nodes**.
+- Applies basic system configurations to **all nodes**.
 
 ### 🔘 **Kubernetes Prerequisites**
 - Installs dependencies required for Kubernetes components.
