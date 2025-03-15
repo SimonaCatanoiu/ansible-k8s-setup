@@ -1,0 +1,55 @@
+- name: Add Kubernetes apt-key
+  get_url:
+    url: https://pkgs.k8s.io/core:/stable:/v1.31/deb/Release.key
+    dest: /etc/apt/keyrings/kubernetes-apt-keyring.asc
+    mode: "0644"
+    force: true
+
+- name: Add Kubernetes APT repository
+  apt_repository:
+    repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.asc] https://pkgs.k8s.io/core:/stable:/v1.31/deb/ /"
+    state: present
+
+- name: Update apt package cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Build hosts file k8s
+  lineinfile: 
+    dest: /etc/hosts
+    regexp: '.*{{ item }}$'
+    line: "{{ hostvars[item]['ansible_host'] }} {{item}}"
+    state: present
+  when: hostvars[item]['ansible_host'] is defined
+  with_items: "{{ groups['k8s'] }}"
+
+- name: Build hosts file kvip
+  lineinfile: 
+    dest: /etc/hosts
+    regexp: '.*{{ item }}$'
+    line: "{{ hostvars[item]['ansible_host'] }} {{item}}"
+    state: present
+  when: hostvars[item]['ansible_host'] is defined
+  with_items: "{{ groups['kvip'] }}"
+
+- name: Install kubernetes packages 
+  apt:
+    name: "{{ item }}" 
+    force: True
+    state: present
+  loop:
+    - kubeadm=1.31.4-1.1
+    - kubelet=1.31.4-1.1
+    - kubectl=1.31.4-1.1
+    - nfs-common
+
+- name: Starting and Enabling the required services
+  service:
+    name: "kubelet"
+    state: started
+    enabled: yes
+
+- name: Mark k8s packages hold
+  shell: |
+    apt-mark hold kubelet kubeadm kubectl

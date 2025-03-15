@@ -1,0 +1,4 @@
+---
+# defaults file
+__lb_addr: <VIP_IP>:16443 
+__cidr_v: 10.1.1.0/24

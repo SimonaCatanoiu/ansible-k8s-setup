@@ -1,0 +1,74 @@
+- name: Install software dependencies
+  become: yes
+  apt:
+    name: "{{ item }}" 
+    state: latest
+  loop:
+    - curl
+    - gnupg2
+    - software-properties-common
+    - apt-transport-https
+    - ca-certificates
+    - lsb-release
+
+- name: Add Docker GPG apt Key
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+
+- name: Install repository for containerd
+  shell: |
+    add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" -y && \
+    apt update -y
+   
+- name: Install containerd
+  apt:
+    name: containerd.io
+    state: latest
+
+- name: Create directory /etc/containerd
+  become: yes
+  file: 
+    path: /etc/containerd
+    state: directory
+    mode: '0755'       
+
+- name: Create file config.toml
+  shell: |
+    containerd config default | tee /etc/containerd/config.toml    
+
+- name: Configure the systemd cgroup driver
+  shell: | 
+    sed -i 's/SystemdCgroup \= false/SystemdCgroup \= true/g' /etc/containerd/config.toml
+
+- name: Create directory /opt/cni/bin
+  become: yes
+  file: 
+    path: /opt/cni/bin
+    state: directory
+    mode: '0755'   
+
+- name: Unarchive cni-plugins
+  become: yes
+  unarchive: 
+    src: https://github.com/containernetworking/plugins/releases/download/v1.6.2/cni-plugins-linux-amd64-v1.6.2.tgz
+    remote_src: yes
+    dest: /opt/cni/bin
+
+- name: Reload daemon
+  shell: |
+    systemctl daemon-reload
+
+- name: Start and enable containerd service
+  service:
+    name: containerd
+    state: started
+    enabled: yes   
+
+- name: Unarchive nerdctl
+  become: yes
+  unarchive: 
+    src: https://github.com/containerd/nerdctl/releases/download/v2.0.3/nerdctl-2.0.3-linux-amd64.tar.gz
+    remote_src: yes
+    dest: /usr/local/bin
+

@@ -1,0 +1,41 @@
+# .bashrc
+# Source global definitions
+if [ -f /etc/bashrc ]; then
+        . /etc/bashrc
+fi
+
+HISTSIZE=1000
+HISTFILESIZE=10000
+HISTTIMEFORMAT="%d/%m/%y %T "
+HISTIGNORE="&:ls:ll:la:history:exit:clear"
+PROMPT_COMMAND='history -a'
+
+#Search in history with up and down arrow keys
+bind '"\e[A": history-search-backward'
+bind '"\e[B": history-search-forward'
+bind "\e[C": forward-char
+bind "\e[D": backward-char
+
+#TAB completion features
+bind '"\t":menu-complete'
+bind "set show-all-if-ambiguous on"
+bind "set completion-ignore-case on"
+bind "set menu-complete-display-prefix on"
+
+# User specific aliases and functions
+alias rm='rm -i'
+alias cp='cp -i'
+alias mv='mv -i'
+alias ll='ls -alF'
+
+# Color support
+if [ -x /usr/bin/dircolors ]; then
+    test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
+    alias ls='ls --color=auto'
+    #alias dir='dir --color=auto'
+    #alias vdir='vdir --color=auto'
+
+    alias grep='grep --color=auto'
+    alias fgrep='fgrep --color=auto'
+    alias egrep='egrep --color=auto'
+fi

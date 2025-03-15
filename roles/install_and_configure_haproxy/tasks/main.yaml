@@ -1,0 +1,127 @@
+- name: Modify System security.conf to acceptable values for web only
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: no
+    ignoreerrors: yes
+  with_items: "{{ sysctl_web }}"
+
+- name: Reload Sysctl
+  command: sysctl -p
+
+- name: Create directory haproxy in etc
+  become: yes
+  file: 
+    path: /etc/haproxy
+    state: directory
+    mode: '0755'
+
+- name: Create directory haproxy in var lib
+  become: yes
+  file: 
+    path: /var/lib/haproxy
+    state: directory
+    mode: '0755'
+
+- name: Create directory /etc/sysconfig 
+  become: yes
+  file: 
+    path: /etc/sysconfig
+    state: directory
+    mode: '0755'    
+
+- name: Create file haproxy stats
+  become: yes
+  file: 
+    path: /var/lib/haproxy/stats
+    state: touch
+
+- name: Unarchive haproxy
+  become: yes
+  unarchive: 
+    src: https://haproxy.org/download/3.1/src/haproxy-3.1.5.tar.gz
+    remote_src: yes
+    dest: /etc/haproxy
+
+- name: Install packages 
+  become: yes
+  apt:
+    name: "{{ item }}" 
+    state: latest
+  loop:
+    - gcc
+    - libpcre3-dev
+    - libpcre3
+    - tar
+    - make
+    - libsystemd-dev
+    - libreadline-dev
+    - libssl-dev
+    - libz-dev
+
+- name: Make 
+  become: yes
+  make:
+    chdir: /etc/haproxy/haproxy-3.1.5
+    file: /etc/haproxy/haproxy-3.1.5/Makefile
+    params:
+      TARGET: linux-glibc
+      MAX_THREADS: 16
+      USE_NS: 1
+      USE_TFO: 1
+      USE_OPENSSL: 1 
+      USE_ZLIB: 1 
+      USE_PCRE: 1 
+      USE_SYSTEMD: 1 
+      USE_LIBCRYPT: 1 
+      USE_THREAD: 1 
+
+- name: Make install haproxy
+  become: yes
+  make: 
+    chdir: /etc/haproxy/haproxy-3.1.5
+    file: /etc/haproxy/haproxy-3.1.5/Makefile
+    target: install
+
+- name: Create user haproxy
+  become: yes
+  user:
+    name: haproxy
+    create_home: no
+
+- name: Create systemd service haproxy
+  become: yes
+  template: 
+    src: haproxy-service.j2
+    dest: /etc/systemd/system/haproxy.service
+
+- name: Create sysconfig haproxy
+  become: yes
+  template: 
+    src: haproxy-sysconfig.j2
+    dest: /etc/sysconfig/haproxy
+
+- name: Create config haproxy
+  become: yes
+  template: 
+    src: haproxy-config.j2
+    dest: /etc/haproxy/haproxy.cfg
+
+- name: Create soft link
+  file:
+    src: /usr/local/sbin/haproxy
+    state: link
+    dest: /usr/sbin/haproxy
+
+- name: Reload daemon
+  shell: |
+    systemctl daemon-reload
+
+- name: Start and enable haproxy service
+  service:
+    name: haproxy
+    state: started
+    enabled: yes
+
+

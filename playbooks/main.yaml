@@ -1,0 +1,61 @@
+# Ansible version 2.13.13
+- hosts: all
+  gather_facts: no
+  become: yes
+  vars_files: 
+  - ../global_vars/commons.yaml
+  roles:
+    - { role: roles/general_setup }
+
+- hosts: k8s
+  gather_facts: no
+  become: yes
+  vars_files: 
+  - ../global_vars/commons.yaml
+  roles:
+    - { role: roles/install_kubernetes_prerequisites }
+    - { role: roles/install_containerd }
+    - { role: roles/install_kubernetes }
+
+- hosts: haproxy
+  gather_facts: no
+  become: yes
+  vars_files: 
+  - ../global_vars/commons.yaml
+  roles:
+    - { role: roles/install_and_configure_keepalived}
+    - { role: roles/install_and_configure_haproxy}
+
+- hosts: "{{groups['masters'][0]}}"
+  gather_facts: no
+  become: yes
+  vars_files: 
+  - ../global_vars/commons.yaml
+  roles:
+    - { role: roles/configure_master_node}
+
+- hosts: workers
+  gather_facts: no
+  become: yes
+  vars_files: 
+  - ../global_vars/commons.yaml
+  roles:
+    - { role: roles/join_worker_node}
+
+
+- hosts: "{{groups['masters'][1:]}}"
+  gather_facts: no
+  become: yes
+  vars_files: 
+  - ../global_vars/commons.yaml
+  roles:
+    - { role: roles/join_master_node}
+
+- hosts:  all
+  gather_facts: no
+  become: yes
+  vars_files: 
+  - ../global_vars/commons.yaml
+  roles:
+    - { role: roles/configure_terminal}
+

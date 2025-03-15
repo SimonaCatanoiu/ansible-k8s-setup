@@ -1,0 +1,5 @@
+---
+# defaults file
+sysctl_web:
+- { name: net.ipv4.ip_local_port_range , value: 1024 65535 }
+- { name: fs.file-max, value: 2097152 }

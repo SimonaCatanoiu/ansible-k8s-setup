@@ -1,0 +1,14 @@
+- name: Create keepalived dir
+  file:
+    path: /etc/keepalived
+    state: directory
+
+- name: Config file
+  ansible.builtin.template:
+    src: keepalived.conf
+    dest: /etc/keepalived/keepalived.conf
+
+- name: Install
+  apt:
+    name: keepalived
+    state: present

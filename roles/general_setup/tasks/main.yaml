@@ -1,0 +1,44 @@
+- name: Reload Sysctl
+  command: sysctl -p
+
+- name: Run apt update
+  shell: apt update -y && apt upgrade -y
+
+- name: Install chrony package
+  package:
+    name: chrony
+    state: present
+
+- name: Start & enable chrony
+  service:
+    name: chronyd
+    state: restarted
+    enabled: yes
+
+- name: Stop & disable firewalld
+  service:
+    name: ufw
+    state: stopped
+    enabled: False
+
+- name: Run apt update
+  shell: apt update -y && apt upgrade -y
+
+- name: Set hostname
+  hostname:
+    name: "{{ inventory_hostname }}"
+
+- name: Update /etc/hostname
+  copy:
+    content: "{{ inventory_hostname }}\n"
+    dest: /etc/hostname
+
+- name: Update /etc/hosts
+  lineinfile:
+    path: /etc/hosts
+    regexp: '^127.0.1.1'
+    line: "127.0.1.1 {{ inventory_hostname }}"
+    backup: yes
+
+- name: Reboot to apply hostname change
+  reboot:

@@ -1,0 +1,54 @@
+- name: Initializing Kubernetes cluster
+  shell: |
+    kubeadm init --control-plane-endpoint={{__lb_addr}} --pod-network-cidr={{__cidr_v}} --upload-certs --skip-phases=addon/kube-proxy
+  register: output
+- debug: var=output
+
+- name: Setup kubectl for the current user
+  shell: |
+    mkdir -p $HOME/.kube
+    sudo cp -f /etc/kubernetes/admin.conf $HOME/.kube/config
+    sudo chown $(id -u):$(id -g) $HOME/.kube/config
+  become: no
+
+- name: Setup kubectl for the root user
+  shell: |
+    mkdir -p $HOME/.kube
+    sudo cp -f /etc/kubernetes/admin.conf $HOME/.kube/config
+    sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+#Install Cilium
+- name: Downaload and extract cilium
+  unarchive:
+    src: "https://github.com/cilium/cilium-cli/releases/download/v0.18.2/cilium-linux-amd64.tar.gz"
+    dest: /usr/local/bin
+    remote_src: yes
+ 
+- name: Install cilium
+  command: "/usr/local/bin/cilium install"
+  register: kubernetes_cilium_install
+ 
+- name: Print the cilium install status
+  debug:
+    msg: "{{ kubernetes_cilium_install.stdout_lines }}"
+
+# Get the Kubernetes join command
+- name: Get the Kubernetes join command
+  shell: kubeadm token create --print-join-command
+  register: join_command
+
+- name: Save the join command on the Ansible controller
+  local_action: copy content="{{ join_command.stdout }}" dest="/tmp/kubernetes_join_command"
+  become: no
+
+- name: Generate the certificate key for control-plane nodes
+  shell: kubeadm init phase upload-certs --upload-certs
+  register: cert_key
+
+- name: Extract the certificate key
+  set_fact:
+    certificate_key: "{{ cert_key.stdout_lines[-1] }}"
+
+- name: Save the join command to a file on Ansible controller
+  local_action: copy content="{{ join_command.stdout }} --control-plane --certificate-key {{ certificate_key }}" dest="/tmp/kubernetes_master_join_command"
+  become: no

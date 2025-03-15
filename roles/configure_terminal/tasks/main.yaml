@@ -1,0 +1,37 @@
+- name: Create directory kube-ps1 in opt  for master node
+  file: 
+    path: /opt/kube-ps1
+    state: directory
+    mode: '0755'
+  when: "'masters' in group_names"
+
+- name: Copy kube-ps1.sh for master node
+  template:
+    src: kube-ps1.j2
+    dest: /opt/kube-ps1/kube-ps1.sh
+  when: "'masters' in group_names"
+
+- name: Copy bashrc for master node
+  template:
+    src: bashrc_master.j2
+    dest: $HOME/.bashrc
+  become: no
+  when: "'masters' in group_names"
+
+- name: Install auto-complete for master node
+  shell: |
+    kubectl completion bash > /etc/bash_completion.d/kubectl
+  when: "'masters' in group_names"
+
+- name: Copy bashrc for the rest of the hosts
+  template:
+    src: bashrc.j2
+    dest: $HOME/.bashrc
+  become: no
+  when: "'masters' not in group_names"
+
+- name: Reload bashrc for the user
+  shell: "source $HOME/.bashrc"
+  become: no
+  args:
+    executable: /bin/bash

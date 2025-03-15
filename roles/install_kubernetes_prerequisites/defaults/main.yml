@@ -1,0 +1,12 @@
+---
+# defaults file
+sysctl_items:
+- { name: net.bridge.bridge-nf-call-ip6tables, value: 1 }
+- { name: net.bridge.bridge-nf-call-iptables, value: 1 }
+- { name: net.ipv4.ip_forward, value: 1 }
+
+sysctl_workers:
+- { name: fs.file-max, value: 2097152 }
+- { name: net.ipv4.tcp_keepalive_time, value: 60 }
+- { name: net.ipv4.tcp_keepalive_intvl, value: 15 }
+- { name: net.ipv4.tcp_keepalive_probes, value: 4 }

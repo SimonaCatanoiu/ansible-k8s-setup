@@ -1,0 +1,170 @@
+global
+  maxconn 100000
+  nbthread 8
+  cpu-map 1 0
+  cpu-map 2 1
+  cpu-map 3 2
+  cpu-map 4 3
+  cpu-map 5 4
+  cpu-map 6 5
+  cpu-map 7 6
+  cpu-map 8 7
+##  cpu-map 9 8
+##  cpu-map 10 9
+##  cpu-map 11 10
+##  cpu-map 12 11
+##  cpu-map 13 12
+##  cpu-map 14 13
+##  cpu-map 15 14
+##  cpu-map 16 15 #mapping each haproxy thread to an entire cpu
+  hard-stop-after 20s
+  log /dev/log local0 
+  log /dev/log local1 notice
+  chroot /var/lib/haproxy
+  stats timeout 30s
+  user haproxy
+  group haproxy
+  daemon
+defaults
+        log global
+        mode http
+        option httplog
+        option dontlognull
+        timeout client          1800s
+        timeout server          1800s
+        timeout connect         5s
+
+frontend http_front
+        bind    *:16443
+        mode tcp
+        default_backend         TransparentBack_api
+
+frontend http_front_stats
+        bind    *:10080
+        mode http
+        stats enable
+        stats auth haproxy:@dmin978
+        stats uri /haproxy?stats
+
+frontend tcp_project_http
+        bind *:80
+        mode tcp
+        default_backend         project_http
+
+frontend tcp_project_https
+        bind *:443
+        mode tcp
+        timeout server 1800s
+        timeout client 1800s
+        option tcplog
+        maxconn 100000
+        default_backend        project_https
+
+backend TransparentBack_api
+        mode tcp
+        balance roundrobin
+
+        server  km01 <master1_ip>:6443 check
+        server  km02 <master2_ip>:6443 check
+        server  km03 <master3_ip>:6443 check
+
+backend project_http
+        mode tcp
+        balance static-rr #roundrobin static - 1 percent better
+        server kw01  <worker1_ip>:80 check send-proxy
+        server kw02  <worker2_ip>:80 check send-proxy
+
+backend project_https
+        mode tcp
+        balance static-rr
+        server kw01  <worker1_ip>:443 check send-proxy
+        server kw02  <worker2_ip>:443 check send-proxy
+
+frontend project_drive
+        bind *:8080
+        mode http
+        default_backend         project_drive_backend
+
+backend project_drive_backend  #if using an external server as backup storage. ex: nextcloud
+        mode http
+        balance roundrobin
+        cookie SERVER insert indirect nocache
+        server storage-app01 <ip_storage1>:80 check inter 1s on-marked-down shutdown-sessions cookie storage-app01
+        server storage-app02 <ip_storage2>:80 check inter 1s on-marked-down shutdown-sessions cookie storage-app02
+
+# decide redis backend to use
+frontend ft_redis
+    bind *:6379
+    mode tcp
+    timeout connect 4s
+    timeout server 30s
+    timeout client 30s
+    use_backend bk_redis
+
+# Check all redis servers to see if they think they are master
+backend bk_redis
+    mode tcp
+    option tcp-check
+    tcp-check connect
+    tcp-check send PING\r\n
+    tcp-check expect string +PONG
+    tcp-check send info\ replication\r\n
+    tcp-check expect string role:master
+    tcp-check send QUIT\r\n
+    tcp-check expect string +OK
+
+    use-server redis1 if { srv_is_up(redis1) } { nbsrv(check_master_redis1) ge 2 }
+    use-server redis2 if { srv_is_up(redis2) } { nbsrv(check_master_redis2) ge 2 }
+    use-server redis3 if { srv_is_up(redis3) } { nbsrv(check_master_redis3) ge 2 }
+
+    server redis1 <redis_ip_1>:6379 check inter 2s on-marked-down shutdown-sessions
+    server redis2 <redis_ip_2>:6379 check inter 2s on-marked-down shutdown-sessions
+    server redis3 <redis_ip_3>:6379 check inter 2s on-marked-down shutdown-sessions
+
+# check 3 sentinel to see if they think redis1 is master
+backend check_master_redis1
+    mode tcp
+    option tcp-check
+    tcp-check connect
+    tcp-check send PING\r\n
+    tcp-check expect string +PONG
+    tcp-check send SENTINEL\ master\ mymaster\r\n
+    tcp-check expect string <redis_ip_1>
+    tcp-check send QUIT\r\n
+    tcp-check expect string +OK
+
+    server sentinel1 <redis_sentinel_ip_1>:26379 check inter 2s
+    server sentinel2 <redis_sentinel_ip_2>:26379 check inter 2s
+    server sentinel3 <redis_sentinel_ip_3>:26379 check inter 2s
+
+# check 3 sentinel to see if they think redis2 is master
+backend check_master_redis2
+    mode tcp
+    option tcp-check
+    tcp-check connect
+    tcp-check send PING\r\n
+    tcp-check expect string +PONG
+    tcp-check send SENTINEL\ master\ mymaster\r\n
+    tcp-check expect string <redis_ip_2>
+    tcp-check send QUIT\r\n
+    tcp-check expect string +OK
+
+    server sentinel1 <redis_sentinel_ip_1>:26379 check inter 2s
+    server sentinel2 <redis_sentinel_ip_2>:26379 check inter 2s
+    server sentinel3 <redis_sentinel_ip_3>:26379 check inter 2s
+
+# check 3 sentinel to see if they think redis3 is master
+backend check_master_redis3
+    mode tcp
+    option tcp-check
+    tcp-check connect
+    tcp-check send PING\r\n
+    tcp-check expect string +PONG
+    tcp-check send SENTINEL\ master\ mymaster\r\n
+    tcp-check expect string <redis_ip_3>
+    tcp-check send QUIT\r\n
+    tcp-check expect string +OK
+
+    server sentinel1 <redis_sentinel_ip_1>:26379 check inter 2s
+    server sentinel2 <redis_sentinel_ip_2>:26379 check inter 2s
+    server sentinel3 <redis_sentinel_ip_3>:26379 check inter 2s

@@ -1,0 +1,41 @@
+- name: Disable SWAP 
+  shell: |
+    swapoff -a
+
+- name: Disable swap permanently, persist reboots
+  replace:
+    path: /etc/fstab
+    regexp: '^(\s*)([^#\n]+\s+)(\w+\s+)swap(\s+.*)$'
+    replace: '#\1\2\3swap\4'
+
+- name: Set load modules via files
+  template: 
+    src: containerd.j2
+    dest: /etc/modules-load.d/containerd.conf
+
+- name: Set load modules via cli
+  shell: modprobe overlay && modprobe br_netfilter
+
+- name: Modify System security.conf to acceptable values
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: no
+    ignoreerrors: yes
+  with_items: "{{ sysctl_items }}"
+
+- name: Modify System security.conf to acceptable values for workers only
+  when: "'workers' in group_names"
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: no
+    ignoreerrors: yes
+  with_items: "{{ sysctl_workers }}"
+
+- name: Reload Sysctl
+  command: sysctl -p
+
+

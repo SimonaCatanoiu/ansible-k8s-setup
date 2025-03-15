@@ -1,0 +1,55 @@
+# .bashrc
+
+# Source global definitions
+if [ -f /etc/bashrc ]; then
+        . /etc/bashrc
+fi
+source <(kubectl completion bash)
+
+HISTSIZE=1000
+HISTFILESIZE=10000
+HISTTIMEFORMAT="%d/%m/%y %T "
+HISTIGNORE="&:ls:ll:la:history:exit:clear"
+PROMPT_COMMAND='history -a'
+
+#Search in history with up and down arrow keys
+bind '"\e[A": history-search-backward'
+bind '"\e[B": history-search-forward'
+bind "\e[C": forward-char
+bind "\e[D": backward-char
+
+#TAB completion features
+bind '"\t":menu-complete'
+bind "set show-all-if-ambiguous on"
+bind "set completion-ignore-case on"
+bind "set menu-complete-display-prefix on"
+
+# User specific aliases and functions
+alias rm='rm -i'
+alias cp='cp -i'
+alias mv='mv -i'
+alias ll='ls -alF'
+
+# Color support
+if [ -x /usr/bin/dircolors ]; then
+    test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
+    alias ls='ls --color=auto'
+    #alias dir='dir --color=auto'
+    #alias vdir='vdir --color=auto'
+
+    alias grep='grep --color=auto'
+    alias fgrep='fgrep --color=auto'
+    alias egrep='egrep --color=auto'
+fi
+
+alias k='kubectl'
+alias kdf='kubectl delete -f'
+alias kaf='kubectl apply -f'
+alias kl='kubectl logs -f'
+alias k='kubectl'
+alias kg='kubectl get'
+alias kns='kubectl config set-context kubernetes-admin@kubernetes --namespace'
+source /opt/kube-ps1/kube-ps1.sh
+PS1='[\u@\h \W $(kube_ps1)]\$ '
+alias klogs='kubectl logs -f --max-log-requests=20 --all-containers=true --selector'
+alias klogs-nginx='kubectl logs -f -lapp=nginx-ingress --max-log-requests=16 --all-containers=true -n nginx-ingress'
