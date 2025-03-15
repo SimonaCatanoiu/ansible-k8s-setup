@@ -60,32 +60,32 @@ ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/
 
 ## 🔧 Playbook Execution Flow
 
-### **General Setup**:
+### 🔘 **General Setup**:
 Applies basic system configurations to **all nodes**.
 
-### **Kubernetes Prerequisites**
+### 🔘 **Kubernetes Prerequisites**
 - Installs dependencies required for Kubernetes components.
 
-### **Containerd Installation**
+### 🔘 **Containerd Installation**
 - Installs and configures **containerd** as the container runtime.
 
-### **Kubernetes Installation**
+### 🔘 **Kubernetes Installation**
 - Installs `kubeadm`, `kubelet`, and `kubectl`.
 
-### **HAProxy & Keepalived Setup**
+### 🔘 **HAProxy & Keepalived Setup**
 - **HAProxy** for API server load balancing.
 - **Keepalived** for a virtual IP, ensuring control plane high availability.
 
-### **Master Node Initialization**
+### 🔘 **Master Node Initialization**
 - The **first master** node initializes the cluster.
 
-### **Worker Nodes Join**
+### 🔘 **Worker Nodes Join**
 - Worker nodes join the cluster using `kubeadm`.
 
-### **Additional Master Nodes Join**
+### 🔘 **Additional Master Nodes Join**
 - The remaining master nodes join to create a **HA control plane**.
 
-### **Final Configuration**
+### 🔘 **Final Configuration**
 - Configures **terminal access** and other essential settings.
 
 ---
