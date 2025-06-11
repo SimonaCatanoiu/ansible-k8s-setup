@@ -113,58 +113,7 @@ backend bk_redis
     tcp-check send QUIT\r\n
     tcp-check expect string +OK
 
-    use-server redis1 if { srv_is_up(redis1) } { nbsrv(check_master_redis1) ge 2 }
-    use-server redis2 if { srv_is_up(redis2) } { nbsrv(check_master_redis2) ge 2 }
-    use-server redis3 if { srv_is_up(redis3) } { nbsrv(check_master_redis3) ge 2 }
-
     server redis1 <redis_ip_1>:6379 check inter 2s on-marked-down shutdown-sessions
     server redis2 <redis_ip_2>:6379 check inter 2s on-marked-down shutdown-sessions
     server redis3 <redis_ip_3>:6379 check inter 2s on-marked-down shutdown-sessions
 
-# check 3 sentinel to see if they think redis1 is master
-backend check_master_redis1
-    mode tcp
-    option tcp-check
-    tcp-check connect
-    tcp-check send PING\r\n
-    tcp-check expect string +PONG
-    tcp-check send SENTINEL\ master\ mymaster\r\n
-    tcp-check expect string <redis_ip_1>
-    tcp-check send QUIT\r\n
-    tcp-check expect string +OK
-
-    server sentinel1 <redis_sentinel_ip_1>:26379 check inter 2s
-    server sentinel2 <redis_sentinel_ip_2>:26379 check inter 2s
-    server sentinel3 <redis_sentinel_ip_3>:26379 check inter 2s
-
-# check 3 sentinel to see if they think redis2 is master
-backend check_master_redis2
-    mode tcp
-    option tcp-check
-    tcp-check connect
-    tcp-check send PING\r\n
-    tcp-check expect string +PONG
-    tcp-check send SENTINEL\ master\ mymaster\r\n
-    tcp-check expect string <redis_ip_2>
-    tcp-check send QUIT\r\n
-    tcp-check expect string +OK
-
-    server sentinel1 <redis_sentinel_ip_1>:26379 check inter 2s
-    server sentinel2 <redis_sentinel_ip_2>:26379 check inter 2s
-    server sentinel3 <redis_sentinel_ip_3>:26379 check inter 2s
-
-# check 3 sentinel to see if they think redis3 is master
-backend check_master_redis3
-    mode tcp
-    option tcp-check
-    tcp-check connect
-    tcp-check send PING\r\n
-    tcp-check expect string +PONG
-    tcp-check send SENTINEL\ master\ mymaster\r\n
-    tcp-check expect string <redis_ip_3>
-    tcp-check send QUIT\r\n
-    tcp-check expect string +OK
-
-    server sentinel1 <redis_sentinel_ip_1>:26379 check inter 2s
-    server sentinel2 <redis_sentinel_ip_2>:26379 check inter 2s
-    server sentinel3 <redis_sentinel_ip_3>:26379 check inter 2s
